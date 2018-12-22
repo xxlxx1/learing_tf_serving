@@ -11,27 +11,31 @@ class model():
 
 #模型保存为ckpt
 def save_model():
-    m = model()
-    session = tf.Session()
-    session.run(tf.global_variables_initializer())
-    update = tf.assign(m.w, [10])
-    session.run(update)
-    predict_y = session.run(m.y,feed_dict={m.a:[3.0]})
-    print(predict_y)
+    graph1 = tf.Graph()
+    with graph1.as_default():
+        m = model()
+        sess1 = tf.Session()
+        sess1.run(tf.global_variables_initializer())
+        update = tf.assign(m.w, [10])
+        sess1.run(update)
+        predict_y = sess1.run(m.y,feed_dict={m.a:[3.0]})
+        print(predict_y)
 
-    saver = tf.train.Saver()
-    saver.save(session,"model_pb/model.ckpt")
-    session.close()
+        saver = tf.train.Saver()
+        saver.save(sess1,"model_pb/model.ckpt")
+        sess1.close()
 
 #加载ckpt模型
 def load_model():
-    m = model()
-    session = tf.Session()
-    saver = tf.train.Saver()
-    saver.restore(session, "model_pb/model.ckpt")
-    predict_y = session.run(m.y, feed_dict={m.a: [3.0]})
-    print(predict_y)
-    return session,m
+    graph2 = tf.Graph()
+    with graph2.as_default():
+        m = model()
+        session = tf.Session()
+        saver = tf.train.Saver()
+        saver.restore(session, "model_pb/model.ckpt")
+        predict_y = session.run(m.y, feed_dict={m.a: [3.0]})
+        print(predict_y)
+        return session,m
 
 #保存为pb模型
 def export_model(session,m):
@@ -80,8 +84,8 @@ def load_pb():
         output_tensor_names.append(output_tensor_name)
     print("load model finish!")
     sentences = {}
+    # 测试pb模型
     for test_x in [[1],[2],[3],[4],[5]]:
-
         sentences["input"] = test_x
         feed_dict_map = {}
         for input_item in model_graph_signature.inputs.items():
@@ -92,7 +96,7 @@ def load_pb():
         print("predict pb y:",predict_y)
 
 if __name__ == "__main__":
-    # save_model()
+    save_model()
     session, m = load_model()
     export_model(session, m)
     load_pb()
