@@ -1,3 +1,4 @@
+import os
 import tensorflow as tf
 from tensorflow.python.saved_model import builder as saved_model_builder
 from tensorflow.python.saved_model import (signature_constants, signature_def_utils, tag_constants, utils)
@@ -14,31 +15,30 @@ def save_model():
     graph1 = tf.Graph()
     with graph1.as_default():
         m = model()
-        sess1 = tf.Session()
-        sess1.run(tf.global_variables_initializer())
+        session = tf.Session()
+        session.run(tf.global_variables_initializer())
         update = tf.assign(m.w, [10])
-        sess1.run(update)
-        predict_y = sess1.run(m.y,feed_dict={m.a:[3.0]})
+        session.run(update)
+        predict_y = session.run(m.y,feed_dict={m.a:[3.0]})
         print(predict_y)
 
         saver = tf.train.Saver()
-        saver.save(sess1,"model_pb/model.ckpt")
-        sess1.close()
+        saver.save(session,"model_pb/model.ckpt")
+        session.close()
 
 #加载ckpt模型
 def load_model():
-    graph2 = tf.Graph()
-    with graph2.as_default():
-        m = model()
-        session = tf.Session()
-        saver = tf.train.Saver()
-        saver.restore(session, "model_pb/model.ckpt")
-        predict_y = session.run(m.y, feed_dict={m.a: [3.0]})
-        print(predict_y)
-        return session,m
+
+    m = model()
+    session = tf.Session()
+    saver = tf.train.Saver()
+    saver.restore(session, "model_pb/model.ckpt")
+    predict_y = session.run(m.y, feed_dict={m.a: [3.0]})
+    print("load ckpy predict", predict_y)
+    return session, m
 
 #保存为pb模型
-def export_model(session,m):
+def export_model(session, m):
 
    #只需要修改这一段，定义输入输出，其他保持默认即可
     model_signature = signature_def_utils.build_signature_def(
@@ -49,6 +49,8 @@ def export_model(session,m):
         method_name=signature_constants.PREDICT_METHOD_NAME)
 
     export_path = "pb_model/1"
+    if os.path.exists(export_path):
+        os.system("rm -rf "+ export_path)
     print("Export the model to {}".format(export_path))
 
     try:
@@ -96,7 +98,7 @@ def load_pb():
         print("predict pb y:",predict_y)
 
 if __name__ == "__main__":
-    save_model()
+    # save_model()
     session, m = load_model()
     export_model(session, m)
     load_pb()
