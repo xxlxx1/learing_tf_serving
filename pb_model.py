@@ -15,7 +15,7 @@ def save_model():
     graph1 = tf.Graph()
     with graph1.as_default():
         m = model()
-        session = tf.Session()
+    with tf.Session(graph=graph1) as session:
         session.run(tf.global_variables_initializer())
         update = tf.assign(m.w, [10])
         session.run(update)
@@ -24,21 +24,11 @@ def save_model():
 
         saver = tf.train.Saver()
         saver.save(session,"model_pb/model.ckpt")
-        session.close()
 
-#加载ckpt模型
-def load_model():
-
-    m = model()
-    session = tf.Session()
-    saver = tf.train.Saver()
-    saver.restore(session, "model_pb/model.ckpt")
-    predict_y = session.run(m.y, feed_dict={m.a: [3.0]})
-    print("load ckpy predict", predict_y)
-    return session, m
 
 #保存为pb模型
 def export_model(session, m):
+
 
    #只需要修改这一段，定义输入输出，其他保持默认即可
     model_signature = signature_def_utils.build_signature_def(
@@ -98,7 +88,15 @@ def load_pb():
         print("predict pb y:",predict_y)
 
 if __name__ == "__main__":
-    # save_model()
-    session, m = load_model()
-    export_model(session, m)
+
+    save_model()
+
+    graph2 = tf.Graph()
+    with graph2.as_default():
+        m = model()
+        saver = tf.train.Saver()
+    with tf.Session(graph=graph2) as session:
+        saver.restore(session, "model_pb/model.ckpt") #加载ckpt模型
+        export_model(session, m)
+
     load_pb()
