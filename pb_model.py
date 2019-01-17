@@ -2,6 +2,7 @@ import os
 import tensorflow as tf
 from tensorflow.python.saved_model import builder as saved_model_builder
 from tensorflow.python.saved_model import (signature_constants, signature_def_utils, tag_constants, utils)
+from tensorflow.python.framework.graph_util import convert_variables_to_constants
 
 class model():
     def __init__(self):
@@ -25,6 +26,38 @@ def save_model():
         saver = tf.train.Saver()
         saver.save(session,"model_pb/model.ckpt")
 
+#保存为pb模型，只有model.pb 没有variables
+def export_model_one(session, m, graph):
+
+    output_names = [m.y.op.name] # 定义模型输出
+
+    input_graph_def = graph.as_graph_def()
+    print(m.y.op.name, m.a.op.name)
+    output_graph_def = convert_variables_to_constants(session, input_graph_def, output_names)
+    output_graph = 'pb_model/model.pb'  # 保存地址
+    with tf.gfile.GFile(output_graph, 'wb') as f:
+        f.write(output_graph_def.SerializeToString())
+
+#加载pb模型, 只有model.pb 没有variables
+def load_pb_one():
+    graph = tf.Graph()
+    with graph.as_default():
+        output_graph_def = tf.GraphDef()
+
+        with open( 'pb_model/model.pb' , "rb") as f:
+            output_graph_def.ParseFromString(f.read())
+            tensors = tf.import_graph_def(output_graph_def, name="")
+        sess = tf.Session()
+        init = tf.global_variables_initializer()
+        sess.run(init)
+
+        input = sess.graph.get_tensor_by_name("Placeholder:0")
+        output = sess.graph.get_tensor_by_name("add:0")
+
+        # 测试pb模型
+        for test_x in [[1], [2], [3], [4], [5]]:
+            predict_y = sess.run(output, feed_dict={input: test_x})
+            print("predict pb y:", predict_y)
 
 #保存为pb模型
 def export_model(session, m):
@@ -89,14 +122,14 @@ def load_pb():
 
 if __name__ == "__main__":
 
-    save_model()
+    # save_model()
 
-    graph2 = tf.Graph()
-    with graph2.as_default():
-        m = model()
-        saver = tf.train.Saver()
-    with tf.Session(graph=graph2) as session:
-        saver.restore(session, "model_pb/model.ckpt") #加载ckpt模型
-        export_model(session, m)
+    # graph2 = tf.Graph()
+    # with graph2.as_default():
+    #     m = model()
+    #     saver = tf.train.Saver()
+    # with tf.Session(graph=graph2) as session:
+    #     saver.restore(session, "model_pb/model.ckpt") #加载ckpt模型
+    #     export_model_one(session, m, graph2)
 
-    load_pb()
+    load_pb_one()
